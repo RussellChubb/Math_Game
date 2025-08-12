@@ -1,113 +1,211 @@
-# Russell's really cool math game 
-
-# Imports
-import random
-import numpy as np
 import pygame
 import sys
-from button import Button
-from pygame.locals import *
+import math
+import os
+import random
 
-# Constants
+# --- Constants ---
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-COLOR_LIGHT = (170, 170, 170)
-COLOR_DARK = (100, 100, 100)
-WIDTH = screen.get_width()
-HEIGHT = screen.get_height()
+WIDTH, HEIGHT = 1280, 720
 FPS = 30
 
-# Initialize the constructor
+STATE_MENU = "menu"
+STATE_GAME = "game"
+STATE_SCORES = "scores"
+
+# --- Setup ---
 pygame.init()
-
-# Setting the screen Properties
-screen_resolution = (720, 720)
-screen = pygame.display.set_mode(screen_resolution)
-caption = pygame.display.set_caption("Russell's Math Game")
-background_colour = pygame.display.set_background(BLACK)
-
-# Actually start the game
-while running:
-
-    clock.tick(FPS)
-
-    for event in pygame.event.get():
-        if event.type == pygame.quit:
-            pygame.quit()
-
-    pygame.display.update()
-
-# Code for Generating Background
-class Projection:
-    def __init__(self, WIDTH, HEIGHT)
-        self.WIDTH = WIDTH
-        self.HEGIHT = HEIGHT
-        self.SCREEN = SCREEN
-            
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Russell's Math Game")
+font = pygame.font.SysFont("Arial", 24, bold=True)
 clock = pygame.time.Clock()
 
-# Main Menu Screen
-# Start Game Text
-text = smallfont.render("START GAME", true, WHITE)
+# --- High Scores ---
+HS_FILE = "high-scores.txt"
+if not os.path.exists(HS_FILE):
+    open(HS_FILE, "w").close()
 
-# High Scores text
-text = smallfont.render("VIEW HIGH SCORES", true, WHITE)
+# --- ASCII Globe Setup ---
+x_sep, y_sep = 10, 20
+rows = HEIGHT // y_sep
+cols = WIDTH // x_sep
+screen_size = rows * cols
+x_offset, y_offset = cols / 2, rows / 2
+theta_spacing = 10
+phi_spacing = 1
+chars = ".,-~:;=!*#$@"
+A, B = 0, 0  # rotation angles
 
-# Render Quit Text
-text = smallfont.render("QUIT", true, WHITE)
+def draw_ascii_globe(surface):
+    global A, B
+    z = [0] * screen_size
+    b = [' '] * screen_size
 
-if event.type == pygame.MOUSEBUTTONDOWN
-    if WIDTH/2 <= mouse[0] <= WIDTH/2+140 and height/2 <= mouse[1] <= height/2+40:
-    pygame.quit()
+    for j in range(0, 628, theta_spacing):
+        for i in range(0, 628, phi_spacing):
+            c = math.sin(i)
+            d = math.cos(j)
+            e = math.sin(A)
+            f = math.sin(j)
+            g = math.cos(A)
+            h = d + 2
+            D = 1 / (c * h * e + f * g + 5)
+            l = math.cos(i)
+            m = math.cos(B)
+            n = math.sin(B)
+            t = c * h * g - f * e
+            x = int(x_offset + 40 * D * (l * h * m - t * n))
+            y = int(y_offset + 20 * D * (l * h * n + t * m))
+            o = x + cols * y
+            N = int(8 * ((f * e - c * d * g) * m - c * d * e - f * g - l * d * n))
+            if 0 <= y < rows and 0 <= x < cols and D > z[o]:
+                z[o] = D
+                b[o] = chars[max(N, 0)]
 
-# Main Game Screen
+    A += 0.0004
+    B += 0.0002
 
+    y_pos = 0
+    x_pos = 0
+    for idx, ch in enumerate(b):
+        text = font.render(ch, True, WHITE)
+        surface.blit(text, (x_pos, y_pos))
+        x_pos += x_sep
+        if (idx + 1) % cols == 0:
+            y_pos += y_sep
+            x_pos = 0
 
-# Initialize the two numbers we want to add together
-integer1 = randint(10,99)
-integer2 = randint(10,99)
+# --- Menu ---
+def draw_menu():
+    title = font.render("Russell's Really Cool Math Game", True, WHITE)
+    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 100))
+    buttons = ["Start Game", "View High Scores", "Quit Game"]
+    button_rects = []
+    for i, text in enumerate(buttons):
+        txt_surf = font.render(text, True, WHITE)
+        rect = txt_surf.get_rect(center=(WIDTH // 2, 250 + i * 60))
+        pygame.draw.rect(screen, (50, 50, 50), rect.inflate(20, 10))
+        screen.blit(txt_surf, rect)
+        button_rects.append((rect, text))
+    return button_rects
 
-# This is the target value we're after
-target_value = integer1 + integer2
+# --- Game ---
+def run_game():
+    score = 0
+    problems = []
+    input_text = ""
+    start_ticks = pygame.time.get_ticks()
+    current_q = generate_problem()
 
-# Initialize score
-score = 0
+    while True:
+        screen.fill(BLACK)
+        draw_ascii_globe(screen)
 
-# TO do
-# Need to create some kind of function that creates a 60 second timer
-# Each game state consists of a 60 second interval where you need to try correctly solve math problems.
-# Once you solve a question correctly, a score variable gets incremented by + 1
-# At the end of the game, you're asked to input your name, and your score gets saved back to a "high-scores" text file.
-# Pressing 2 will print the .txt file to the screen in a formatted fashion
-# Create virtual environment
-# Implement if name == main convention
-# Add to GitHub, create .gitignore file
-# Refactor to use .pygame
+        # Timer
+        seconds = 60 - (pygame.time.get_ticks() - start_ticks) // 1000
+        if seconds <= 0:
+            save_score(score)
+            return  # Exit to menu
 
-# Function to run a game
-def start_game():
-    # Need something in here to Initialize a 60 second timer - would be cool to see it countdown togetherer
-    answer = input(printf("What's {integer1} + {integer2}"))
-    if answer != target_value:
-        print("Not quite right, try again")
-    elif answer == target_value:
-        print("Nice, have another one")
-        Score += 100
+        # Draw
+        timer_surf = font.render(f"Time: {seconds}", True, WHITE)
+        score_surf = font.render(f"Score: {score}", True, WHITE)
+        q_surf = font.render(f"{current_q[0]} + {current_q[1]} = {input_text}", True, WHITE)
+        screen.blit(timer_surf, (50, 20))
+        screen.blit(score_surf, (WIDTH - 150, 20))
+        screen.blit(q_surf, (WIDTH // 2 - q_surf.get_width() // 2, HEIGHT // 2))
 
-# Function to print high-scores
-def high_scores()
-    file.open('high-scores')
-    print('high-scores') # I don't really know how to open a file and then print it to terminal
-    nav_input = input(print("Press 5 to navigate back"))
-if nav_input = 5:
-    Main_Menu()
+        pygame.display.flip()
 
-# This controls user movement around the game
-def Main_Menu()
-    if control_input = 1:
-        start_game()
-    elif control_input = 2:
-        high_scores()
-    elif:
-        control_input = 3
-        exit() /# This just needs to break the program, not sure how to do that, but oh well.
+        # Events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    if input_text.isdigit():
+                        if int(input_text) == sum(current_q):
+                            score += 1
+                        else:
+                            score -= 1
+                        current_q = generate_problem()
+                        input_text = ""
+                elif event.key == pygame.K_BACKSPACE:
+                    input_text = input_text[:-1]
+                elif event.unicode.isdigit():
+                    input_text += event.unicode
+
+        clock.tick(FPS)
+
+def generate_problem():
+    return (random.randint(10, 99), random.randint(10, 99))
+
+# --- High Scores ---
+def save_score(score):
+    name = "Player"  # Could add text entry if wanted
+    with open(HS_FILE, "a") as f:
+        f.write(f"{name},{score}\n")
+
+def load_scores():
+    scores = []
+    with open(HS_FILE, "r") as f:
+        for line in f:
+            name, val = line.strip().split(",")
+            scores.append((name, int(val)))
+    return sorted(scores, key=lambda x: x[1], reverse=True)[:10]
+
+def show_scores():
+    while True:
+        screen.fill(BLACK)
+        draw_ascii_globe(screen)
+        scores = load_scores()
+        title = font.render("High Scores", True, WHITE)
+        screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 50))
+        for i, (name, score) in enumerate(scores):
+            line = font.render(f"{i+1}. {name} - {score}", True, WHITE)
+            screen.blit(line, (WIDTH // 2 - 100, 150 + i * 40))
+
+        back_txt = font.render("Press ESC to return", True, WHITE)
+        screen.blit(back_txt, (WIDTH // 2 - back_txt.get_width() // 2, HEIGHT - 60))
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return
+
+        clock.tick(FPS)
+
+# --- Main Loop ---
+def main():
+    state = STATE_MENU
+    while True:
+        screen.fill(BLACK)
+        draw_ascii_globe(screen)
+
+        if state == STATE_MENU:
+            buttons = draw_menu()
+            pygame.display.flip()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    for rect, label in buttons:
+                        if rect.collidepoint(event.pos):
+                            if label == "Start Game":
+                                run_game()
+                            elif label == "View High Scores":
+                                show_scores()
+                            elif label == "Quit Game":
+                                pygame.quit()
+                                sys.exit()
+
+        clock.tick(FPS)
+
+if __name__ == "__main__":
+    main()
