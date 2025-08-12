@@ -63,7 +63,7 @@ def draw_ascii_globe(surface):
                 z[o] = D
                 b[o] = chars[max(N, 0)]
 
-    A += 0.0004
+    A += 0.04
     B += 0.0002
 
     y_pos = 0
@@ -143,8 +143,11 @@ def generate_problem():
     return (random.randint(10, 99), random.randint(10, 99))
 
 # --- High Scores ---
+# TO DO:
+# - Add a text entry for player name
+
 def save_score(score):
-    name = "Player"  # Could add text entry if wanted
+    name = "Player"
     with open(HS_FILE, "a") as f:
         f.write(f"{name},{score}\n")
 
