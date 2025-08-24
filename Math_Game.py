@@ -238,7 +238,46 @@ class Button:
                 return True
         return False
 
+# --- Countdown Function ---
+def countdown(seconds=3):
+    BIG_FONT = load_font(128)
+    beep_sound = load_sound("countdown_beep.wav")
+    clock = pygame.time.Clock()
+    
+    start_time = pygame.time.get_ticks()
+    current_number = seconds
+    
+    while current_number > 0:
+        elapsed_ms = pygame.time.get_ticks() - start_time
+        new_number = seconds - elapsed_ms // 1000
+        
+        # Only play beep when number changes
+        if new_number < current_number:
+            current_number = new_number
+            if beep_sound:
+                beep_sound.play()
+        
+        screen.fill(BLACK)
+        draw_ascii_globe(screen)
+        
+        # Draw countdown number with white border
+        number_text = str(current_number)
+        number_surf = BIG_FONT.render(number_text, True, WHITE)
+        number_rect = number_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        
+        # Draw border by blitting text offsets in white
+        offsets = [(-4, 0), (4, 0), (0, -4), (0, 4), (-4, -4), (4, -4), (-4, 4), (4, 4)]
+        for ox, oy in offsets:
+            border_surf = BIG_FONT.render(number_text, True, BLACK)
+            screen.blit(border_surf, number_rect.move(ox, oy))
+        
+        screen.blit(number_surf, number_rect)
+        
+        pygame.display.flip()
+        clock.tick(FPS)
+
 # --- Menu ---
+
 def draw_menu():
     title = MENU_TITLE_FONT.render("Russell's Really Cool Math Game", True, WHITE)
     title_rect = title.get_rect(center=(WIDTH // 2, 100))
@@ -341,9 +380,10 @@ def donut_explosion(surface, chars_data, duration=1500):
 def run_game():
     global glow_color, glow_start_time, flash_color, flash_start_time
 
-    # 3x the original GAME_FONT size
-    BIG_GAME_FONT = load_font(72)  # original was 24, now 72
+    # Countdown before the game starts
+    countdown(5)  # counts down from 5 seconds
 
+    BIG_GAME_FONT = load_font(72)  # original was 24, now 72
     score = 0
     input_text = ""
     start_ticks = pygame.time.get_ticks()
@@ -360,8 +400,8 @@ def run_game():
         q_rect = q_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
         # Draw the rectangle behind the question
-        pygame.draw.rect(screen, GREY, q_rect.inflate(60, 30))  # bigger padding for 3x size
-        pygame.draw.rect(screen, WHITE, q_rect.inflate(60, 30), 5)  # 5px border
+        pygame.draw.rect(screen, GREY, q_rect.inflate(60, 30))
+        pygame.draw.rect(screen, WHITE, q_rect.inflate(60, 30), 5)
 
         # Draw the text
         screen.blit(q_surf, q_rect)
