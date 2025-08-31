@@ -35,7 +35,9 @@ import pygame
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
 # Sound Folder Path
-BASE_PATH = r"C:\Users\rc30\OneDrive - Meridian Energy Limited\Documents\Programming\Personal\Math_Game"
+BASE_PATH = r"C:\Users\rc30\OneDrive - Meridian Energy Limited\Documents\Programming\Personal\Math_Game\Assets"
+
+# Debugging Some Sound Stfuff
 
 def load_sound(filename):
     path = os.path.join(BASE_PATH, filename)
