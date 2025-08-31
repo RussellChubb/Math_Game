@@ -22,8 +22,10 @@ import random
 14) Make "Score" larger, (and maybe glow) on the finished game scene (so that people better understand what they achieved)
 15) Add a line cursor to the text input field in the game state as well as the enter a name menu once the game has finished.
 16) Add in the count-down beep, and then the final buzzer sound.
-
-MISC: Where's Russell Game?
+17) Add explosion sound to the donut explosion at the end of the game.
+18) Add in a "Are you sure you want to quit?" prompt when you try and quit the game from the pause menu.
+19) Duck Background music when transisioning between screens.
+20) Add in a "New High Score!" prompt when you get a new high score.
 
 '''
 
@@ -54,7 +56,7 @@ button_sound = load_sound("button.wav")
 bg_music_path = os.path.join(BASE_PATH, "background.wav")
 if os.path.exists(bg_music_path):
     pygame.mixer.music.load(bg_music_path)
-    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.set_volume(0.15)
     pygame.mixer.music.play(-1)
 else:
     print(f"Background music not found: {bg_music_path}")
