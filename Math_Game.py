@@ -1,45 +1,30 @@
+# Math Game
+
+# Imports
 import pygame
 import sys
 import math
 import os
 import random
 
-# --- To do ---
-'''
-1) Fix bug where the scores aren't correctly being written to the .txt file - Getting weird edge case where sometimes I get a completly different high-scores board. Weird behaviour, I just need it to save each completed attempt to the .txt file, and read the .txt file to the screen.
-2) Get theming consistent on the different UI elements (buttons, backgrounds, etc.)
-3) Move clock to somewhere where people can see the time remaining more easily? (Not sure how I'd go about this, open to ideas)
-4) Implement hot streak (if you get 3 in a row, you get a custom sound and maybe some kind of fire effect?)
-5) Add a back button to the high-scores screen.
-6) Add two different background music tracks, one for the game-state, and one for the menu.
-7) Add that Minecraft style random text in the top right hand corner of the menu
-8) Add a settings menu where you can change music volume, SFX Volume, time limit, number range, etc.
-9) Structure the folder (and the git repo, more appropriately)
-10) Figure out how to run tests on the file (linting etc)
-11) Create custom .ico file
-12) Create logo for the game + Draw the logo on the main-screen.
-13) Fix the fade effect, it currently doesn't work as intended. Also, I'd love more of a pixelated fade rather than a clean fade, as it's more in style with the game.
-14) Make "Score" larger, (and maybe glow) on the finished game scene (so that people better understand what they achieved)
-15) Add a line cursor to the text input field in the game state as well as the enter a name menu once the game has finished.
-16) Add in the count-down beep, and then the final buzzer sound.
-17) Add explosion sound to the donut explosion at the end of the game.
-18) Add in a "Are you sure you want to quit?" prompt when you try and quit the game from the pause menu.
-19) Duck Background music when transisioning between screens.
-20) Add in a "New High Score!" prompt when you get a new high score.
+# Constants
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREY = (30, 30, 30)
+WIDTH, HEIGHT = 1280, 720
+FPS = 30
+PASTEL_GREEN = (144, 238, 144)
+PASTEL_RED = (255, 182, 193)
 
-'''
-
-# --- Sound Setup ---
-import os
-import pygame
+STATE_MENU = "menu"
+STATE_GAME = "game"
+STATE_SCORES = "scores"
 
 # --- Sound Setup ---
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
 # Sound Folder Path
-BASE_PATH = r"C:\Users\rc30\OneDrive - Meridian Energy Limited\Documents\Programming\Personal\Math_Game\Assets"
-
-# Debugging Some Sound Stfuff
+BASE_PATH = os.path.join(os.path.dirname(__file__), "Assets", "Music")
 
 def load_sound(filename):
     path = os.path.join(BASE_PATH, filename)
@@ -49,6 +34,7 @@ def load_sound(filename):
         print(f"Sound file not found: {path}")
         return None
 
+# Sounds Map
 correct_sound = load_sound("correct.wav")
 incorrect_sound = load_sound("incorrect.wav")
 timesup_sound = load_sound("timesup.wav")
@@ -68,7 +54,7 @@ def play_sound(sound):
         sound.set_volume(1.0)
         sound.play()
 
-# --- Smooth Fade Animation ---
+# Fade Animation
 def fade_transition(surface, duration=500):
     fade = pygame.Surface((WIDTH, HEIGHT))
     fade.fill(BLACK)
@@ -95,29 +81,16 @@ def fade_transition(surface, duration=500):
         if elapsed >= duration:
             break
 
-# --- Constants ---
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREY = (30, 30, 30)
-WIDTH, HEIGHT = 1280, 720
-FPS = 30
-PASTEL_GREEN = (144, 238, 144)
-PASTEL_RED = (255, 182, 193)
-
-STATE_MENU = "menu"
-STATE_GAME = "game"
-STATE_SCORES = "scores"
-
-# --- Setup ---
+# Setup
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Russell's Math Game")
 clock = pygame.time.Clock()
 
-# --- Fonts ---
+# Fonts
 def load_font(size):
     try:
-        font_path = os.path.join(os.path.dirname(__file__), "VT323-Regular.ttf")
+        font_path = os.path.join(os.path.dirname(__file__), "Assets", "Fonts", "VT323-Regular.ttf")
         return pygame.font.Font(font_path, size)
     except FileNotFoundError:
         return pygame.font.SysFont("Arial", size, bold=True)
@@ -126,12 +99,12 @@ MENU_TITLE_FONT = load_font(64)
 MENU_BUTTON_FONT = load_font(36)
 GAME_FONT = load_font(24)
 
-# --- High Scores ---
+# High Scores
 HS_FILE = "high-scores.txt"
 if not os.path.exists(HS_FILE):
     open(HS_FILE, "w").close()
 
-# --- ASCII Globe Setup ---
+# ASCII Globe Setup
 x_sep, y_sep = 10, 20
 rows = HEIGHT // y_sep
 cols = WIDTH // x_sep
@@ -188,7 +161,7 @@ def draw_ascii_globe(surface, capture=False):
     if capture:
         return captured
 
-# --- Glow & Flash Effects ---
+# Glow & Flash Effects
 glow_color = None
 glow_start_time = None
 flash_color = None
@@ -220,7 +193,7 @@ def draw_flash(surface, rect, color, start_time):
         return True
     return False
 
-# --- Button Class ---
+# Button Class
 class Button:
     def __init__(self, text, center, width, height, font, base_color=GREY, text_color=WHITE, hover_color=None, click_color=WHITE):
         self.text = text
@@ -265,7 +238,7 @@ class Button:
                 return True
         return False
 
-# --- Countdown Function ---
+# Countdown Function
 def countdown(seconds=3):
     BIG_FONT = load_font(128)
     beep_sound = load_sound("countdown_beep.wav")
@@ -303,8 +276,7 @@ def countdown(seconds=3):
         pygame.display.flip()
         clock.tick(FPS)
 
-# --- Menu ---
-
+# Menu
 def draw_menu():
     title = MENU_TITLE_FONT.render("Russell's Really Cool Math Game", True, WHITE)
     title_rect = title.get_rect(center=(WIDTH // 2, 100))
@@ -314,7 +286,7 @@ def draw_menu():
     buttons = []
     BUTTON_WIDTH = 400
     BUTTON_HEIGHT = 70
-    button_texts = ["Start Game", "View High Scores", "Quit Game"]
+    button_texts = ["Start Game", "View High Scores", "Settings", "Quit Game"]
 
     for i, text in enumerate(button_texts):
         btn = Button(text=text, center=(WIDTH // 2, 250 + i * 100),
@@ -326,7 +298,7 @@ def draw_menu():
 
     return buttons
 
-# --- Pause Menu ---
+# Pause Menu
 def pause_menu():
     BUTTON_WIDTH = 300
     BUTTON_HEIGHT = 60
@@ -373,7 +345,116 @@ def pause_menu():
 
         clock.tick(FPS)
 
-# --- Game functions ---
+# Global Settings
+MUSIC_VOLUME = 0.15
+SFX_VOLUME = 1.0
+NUMBER_RANGE = (10, 99)
+GAME_OPERATION = "Addition"
+
+def settings_menu():
+    global MUSIC_VOLUME, SFX_VOLUME, NUMBER_RANGE
+
+    # Back button
+    BUTTON_WIDTH, BUTTON_HEIGHT = 200, 50
+    back_button = Button("Back", (WIDTH // 2, HEIGHT - 80), BUTTON_WIDTH, BUTTON_HEIGHT, MENU_BUTTON_FONT)
+
+    # Settings definitions: [current_value, min, max, step]
+    sliders = {
+        "Music Volume": [MUSIC_VOLUME, 0.0, 1.0, 0.01],
+        "SFX Volume": [SFX_VOLUME, 0.0, 1.0, 0.01],
+        "Number Range Min": [NUMBER_RANGE[0], 1, 50, 1],
+        "Number Range Max": [NUMBER_RANGE[1], 51, 200, 1],
+    }
+
+    slider_rects = {}  # Store rects for click detection
+    dragging = None    # Which slider is being dragged
+
+    while True:
+        screen.fill(BLACK)
+        draw_ascii_globe(screen)
+
+        panel_width, panel_height = 700, 600
+        panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
+        panel_rect.center = (WIDTH // 2, HEIGHT // 2)
+
+        # Panel + border
+        pygame.draw.rect(screen, GREY, panel_rect, border_radius=15)
+        pygame.draw.rect(screen, WHITE, panel_rect, 3, border_radius=15)
+
+        title = MENU_TITLE_FONT.render("Settings", True, WHITE)
+        screen.blit(title, (panel_rect.centerx - title.get_width() // 2, panel_rect.top + 20))
+
+        # Draw sliders
+        slider_width = 400
+        slider_height = 20
+        spacing = 60
+        start_y = panel_rect.top + 160
+
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+
+        for i, (key, (val, minv, maxv, step)) in enumerate(sliders.items()):
+            y = start_y + i * spacing
+
+            # Center slider horizontally on the panel
+            x = panel_rect.centerx - slider_width // 2
+
+            # Slider background
+            bar_rect = pygame.Rect(x, y, slider_width, slider_height)
+            pygame.draw.rect(screen, WHITE, bar_rect, 2, border_radius=10)
+
+            # Slider fill (white)
+            fill_width = int(((val - minv) / (maxv - minv)) * slider_width)
+            pygame.draw.rect(screen, WHITE, (x, y, fill_width, slider_height), border_radius=10)
+
+            # Slider handle
+            handle_x = x + fill_width
+            handle_rect = pygame.Rect(handle_x - 10, y - 5, 20, slider_height + 10)
+            pygame.draw.rect(screen, WHITE, handle_rect, border_radius=5)
+
+            slider_rects[key] = bar_rect
+
+            # Label
+            label = GAME_FONT.render(f"{key}: {val}", True, WHITE)
+            label_rect = label.get_rect(center=(panel_rect.centerx, y - 20))
+            screen.blit(label, label_rect)
+
+            # Handle dragging
+            if dragging == key or (mouse_pressed and bar_rect.collidepoint(mouse_pos)):
+                dragging = key
+                rel_x = max(0, min(mouse_pos[0] - x, slider_width))
+                new_val = minv + (rel_x / slider_width) * (maxv - minv)
+                # Round according to step
+                if step < 1:
+                    new_val = round(new_val, 2)
+                else:
+                    new_val = int(round(new_val))
+                sliders[key][0] = new_val
+
+        if not mouse_pressed:
+            dragging = None
+
+        # Draw back button
+        back_button.draw(screen)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if back_button.is_clicked(event):
+                # Save settings globally
+                MUSIC_VOLUME = sliders["Music Volume"][0]
+                SFX_VOLUME = sliders["SFX Volume"][0]
+                NUMBER_RANGE = (sliders["Number Range Min"][0], sliders["Number Range Max"][0])
+                pygame.mixer.music.set_volume(MUSIC_VOLUME)
+                fade_transition(screen)
+                return
+
+        clock.tick(FPS)
+
+# Game functions
 def generate_problem():
     return (random.randint(10, 99), random.randint(10, 99))
 
@@ -408,7 +489,7 @@ def run_game():
     global glow_color, glow_start_time, flash_color, flash_start_time
 
     # Countdown before the game starts
-    countdown(5)  # counts down from 5 seconds
+    countdown(3)
 
     BIG_GAME_FONT = load_font(72)  # original was 24, now 72
     score = 0
@@ -493,40 +574,65 @@ def run_game():
 
         clock.tick(FPS)
 
-# --- High Scores ---
+# High Scores
 def save_score(name, score):
+    # Include operation type in the record
     with open(HS_FILE, "a") as f:
-        f.write(f"{name},{score}\n")
+        f.write(f"{name},{score},{GAME_OPERATION}\n")
 
-def load_scores():
+def load_scores(operation=None):
     scores = []
     with open(HS_FILE, "r") as f:
         for line in f:
             if "," in line:
-                name, val = line.strip().split(",")
-                scores.append((name, int(val)))
+                parts = line.strip().split(",")
+                if len(parts) == 3:
+                    name, val, op = parts
+                    val = int(val)
+                    if operation is None or op == operation:
+                        scores.append((name, val))
     return sorted(scores, key=lambda x: x[1], reverse=True)[:10]
 
+# Working Show Scores Function
 def show_scores():
     fade_transition(screen)
+
+    BUTTON_WIDTH = 250
+    BUTTON_HEIGHT = 60
+    back_button = Button(
+        "Back",
+        (WIDTH // 2, HEIGHT - 100),
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
+        MENU_BUTTON_FONT
+    )
+
     while True:
         screen.fill(BLACK)
         draw_ascii_globe(screen)
         scores = load_scores()
+
         panel_width, panel_height = 500, 500
         panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
         panel_rect.center = (WIDTH // 2, HEIGHT // 2)
+
         pygame.draw.rect(screen, GREY, panel_rect)
 
         title = MENU_TITLE_FONT.render("High Scores", True, WHITE)
-        screen.blit(title, (panel_rect.centerx - title.get_width() // 2, panel_rect.top + 20))
+        screen.blit(
+            title,
+            (panel_rect.centerx - title.get_width() // 2, panel_rect.top + 20)
+        )
 
         for i, (name, score) in enumerate(scores):
             line = GAME_FONT.render(f"{i+1}. {name} - {score}", True, WHITE)
-            screen.blit(line, (panel_rect.left + 50, panel_rect.top + 80 + i * 40))
+            screen.blit(
+                line,
+                (panel_rect.left + 50, panel_rect.top + 80 + i * 40)
+            )
 
-        back_txt = GAME_FONT.render("Press ESC to return", True, WHITE)
-        screen.blit(back_txt, (panel_rect.centerx - back_txt.get_width() // 2, panel_rect.bottom - 40))
+        # Draw Back button
+        back_button.draw(screen)
 
         pygame.display.flip()
 
@@ -534,23 +640,34 @@ def show_scores():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+
+            # Mouse-based back button
+            if back_button.is_clicked(event):
+                fade_transition(screen)
+                return
+
+            # Keeping ESC support
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 fade_transition(screen)
                 return
 
         clock.tick(FPS)
 
-# --- Name Entry ---
 def name_entry_screen(score):
     name = ""
-    BUTTON_WIDTH, BUTTON_HEIGHT = 300, 60
+    BUTTON_WIDTH, BUTTON_HEIGHT = 200, 60
+    submit_button = Button("Submit", (WIDTH // 2, HEIGHT // 2 + 100), BUTTON_WIDTH, BUTTON_HEIGHT, MENU_BUTTON_FONT)
+
     while True:
         screen.fill(BLACK)
         draw_ascii_globe(screen)
-        panel_width, panel_height = 500, 300
+        panel_width, panel_height = 500, 350
         panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
         panel_rect.center = (WIDTH // 2, HEIGHT // 2)
-        pygame.draw.rect(screen, GREY, panel_rect)
+
+        # Panel + border
+        pygame.draw.rect(screen, GREY, panel_rect, border_radius=15)
+        pygame.draw.rect(screen, WHITE, panel_rect, 3, border_radius=15)
 
         go_text = MENU_TITLE_FONT.render("GAME OVER", True, WHITE)
         screen.blit(go_text, (panel_rect.centerx - go_text.get_width() // 2, panel_rect.top + 20))
@@ -559,6 +676,9 @@ def name_entry_screen(score):
         input_text = GAME_FONT.render(f"Name (4 chars): {name}", True, WHITE)
         screen.blit(input_text, (panel_rect.left + 50, panel_rect.top + 160))
 
+        # Submit button
+        submit_button.draw(screen)
+
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -566,18 +686,19 @@ def name_entry_screen(score):
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN and len(name) > 0:
-                    save_score(name.upper(), score)
-                    fade_transition(screen)
-                    return
-                elif event.key == pygame.K_BACKSPACE:
+                if event.key == pygame.K_BACKSPACE:
                     name = name[:-1]
                 elif len(name) < 4 and event.unicode.isalpha():
                     name += event.unicode.upper()
+            elif submit_button.is_clicked(event):
+                if len(name) > 0:
+                    save_score(name.upper(), score)
+                    fade_transition(screen)
+                    return
 
         clock.tick(FPS)
 
-# --- Main Loop ---
+# Main Loop
 def main():
     state = STATE_MENU
     while True:
@@ -600,8 +721,11 @@ def main():
                         elif btn.text == "Quit Game":
                             pygame.quit()
                             sys.exit()
+                        elif btn.text == "Settings":
+                            settings_menu()
 
         clock.tick(FPS)
 
+# Main Guard
 if __name__ == "__main__":
     main()

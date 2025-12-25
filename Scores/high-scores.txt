@@ -1,0 +1,10 @@
+Player,4
+Player,1
+DAN,10
+JEOR,4
+GW,4
+MMMM,2
+TIMH,9
+RUSS,9
+KAT,7
+OLIV,6
