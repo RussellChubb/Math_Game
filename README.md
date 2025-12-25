@@ -13,11 +13,10 @@ Retro-styled maths game, designed to improve your double integer addition skills
 ![Main Menu](Images/Menu.png)
 
 *In-Game*
-![Settings](Images/InGame.png)
+![Settings](Images/Ingame.png)
 
 *Settings*
 ![Settings](Images/Settings.png)
-
 
 ## ✨ Features
 
