@@ -99,10 +99,43 @@ MENU_TITLE_FONT = load_font(64)
 MENU_BUTTON_FONT = load_font(36)
 GAME_FONT = load_font(24)
 
+# Menu phrases (Minecraft-style random text)
+MENU_PHRASES_FILE = os.path.join(os.path.dirname(__file__), "menu_phrases.txt")
+def load_menu_phrases():
+    if os.path.exists(MENU_PHRASES_FILE):
+        try:
+            with open(MENU_PHRASES_FILE, "r", encoding="utf-8") as f:
+                lines = [ln.strip() for ln in f.readlines() if ln.strip()]
+            return lines if lines else ["Have fun!"]
+        except Exception:
+            return ["Have fun!"]
+    return ["Have fun!"]
+
+menu_phrases = load_menu_phrases()
+menu_phrase = random.choice(menu_phrases)
+phrase_last_change = pygame.time.get_ticks()
+# change every 5 seconds
+PHRASE_CHANGE_INTERVAL = 5000
+
+# Phrase font for the top-right menu text (larger + bold)
+# We prefer the bundled font but force bold for strong Minecraft-like look
+MENU_PHRASE_FONT = load_font(48)
+try:
+    MENU_PHRASE_FONT.set_bold(True)
+except Exception:
+    pass
+
+# Pulsate settings
+PHRASE_PULSATE_AMPLITUDE = 0.15  # how much it grows/shrinks
+PHRASE_PULSATE_SPEED = 0.0015    # speed of pulsation
+
 # High Scores
 HS_FILE = "high-scores.txt"
 if not os.path.exists(HS_FILE):
     open(HS_FILE, "w").close()
+
+
+
 
 # ASCII Globe Setup
 x_sep, y_sep = 10, 20
@@ -166,6 +199,8 @@ glow_color = None
 glow_start_time = None
 flash_color = None
 flash_start_time = None
+score_glow_color = None
+score_glow_start_time = None
 GLOW_DURATION = 1000
 FLASH_DURATION = 500
 
@@ -280,8 +315,28 @@ def countdown(seconds=3):
 def draw_menu():
     title = MENU_TITLE_FONT.render("Russell's Really Cool Math Game", True, WHITE)
     title_rect = title.get_rect(center=(WIDTH // 2, 100))
-    pygame.draw.rect(screen, GREY, title_rect.inflate(40, 20))
+    title_panel = title_rect.inflate(40, 20)
+    pygame.draw.rect(screen, GREY, title_panel)
+    pygame.draw.rect(screen, WHITE, title_panel, 3, border_radius=10)
     screen.blit(title, title_rect)
+
+    # Minecraft-like menu phrase at the bottom (do not auto-change while in menu)
+    global menu_phrase, phrase_last_change
+    now = pygame.time.get_ticks()
+
+    # Pulsate scale (slow) — keep rotation at 0 degrees per request
+    pulsate = 1.0 + PHRASE_PULSATE_AMPLITUDE * math.sin(now * PHRASE_PULSATE_SPEED)
+    phrase_surf = MENU_PHRASE_FONT.render(menu_phrase, True, WHITE)
+    shadow = MENU_PHRASE_FONT.render(menu_phrase, True, (0, 0, 0))
+    rendered = pygame.transform.rotozoom(phrase_surf, 0, pulsate)
+    rendered_shadow = pygame.transform.rotozoom(shadow, 0, pulsate)
+
+    # Position centered at bottom with small buffer above the bottom edge
+    px = (WIDTH - rendered.get_width()) // 2
+    py = HEIGHT - rendered.get_height() - 12
+    # draw shadow slightly offset for contrast
+    screen.blit(rendered_shadow, (px + 3, py + 3))
+    screen.blit(rendered, (px, py))
 
     buttons = []
     BUTTON_WIDTH = 400
@@ -486,12 +541,14 @@ def donut_explosion(surface, chars_data, duration=1500):
         clock.tick(FPS)
 
 def run_game():
-    global glow_color, glow_start_time, flash_color, flash_start_time
+    global glow_color, glow_start_time, flash_color, flash_start_time, score_glow_color, score_glow_start_time
 
     # Countdown before the game starts
     countdown(3)
 
-    BIG_GAME_FONT = load_font(72)  # original was 24, now 72
+    BIG_GAME_FONT = load_font(72)
+    HUD_FONT = load_font(40)
+
     score = 0
     input_text = ""
     start_ticks = pygame.time.get_ticks()
@@ -528,10 +585,35 @@ def run_game():
 
         # Timer and score display
         seconds = 60 - (pygame.time.get_ticks() - start_ticks) // 1000
-        timer_surf = GAME_FONT.render(f"Time: {seconds}", True, WHITE)
-        score_surf = GAME_FONT.render(f"Score: {score}", True, WHITE)
-        screen.blit(timer_surf, (50, 20))
-        screen.blit(score_surf, (WIDTH - 150, 20))
+        timer_text = f"Time: {seconds}"
+        score_text = f"Score: {score}"
+
+        timer_color = WHITE
+        if seconds <= 10:
+            blink = (pygame.time.get_ticks() // 250) % 2
+            timer_color = PASTEL_RED if blink else WHITE
+
+        timer_surf = HUD_FONT.render(timer_text, True, timer_color)
+        score_surf = HUD_FONT.render(score_text, True, WHITE)
+
+        timer_rect = timer_surf.get_rect(topleft=(30, 20))
+        score_rect = score_surf.get_rect(topright=(WIDTH - 30, 20))
+
+        # Panel backgrounds for legibility
+        timer_panel = pygame.Rect(timer_rect.left - 12, timer_rect.top - 8, timer_rect.width + 24, timer_rect.height + 16)
+        score_panel = pygame.Rect(score_rect.left - 12, score_rect.top - 8, score_rect.width + 24, score_rect.height + 16)
+        pygame.draw.rect(screen, GREY, timer_panel, border_radius=10)
+        pygame.draw.rect(screen, WHITE, timer_panel, 2, border_radius=10)
+        pygame.draw.rect(screen, GREY, score_panel, border_radius=10)
+        pygame.draw.rect(screen, WHITE, score_panel, 2, border_radius=10)
+
+        if score_glow_color and score_glow_start_time:
+            still_glowing = draw_glow(screen, score_panel.inflate(4, 4), score_glow_color, score_glow_start_time)
+            if not still_glowing:
+                score_glow_color, score_glow_start_time = None, None
+
+        screen.blit(timer_surf, timer_rect)
+        screen.blit(score_surf, score_rect)
 
         pygame.display.flip()
 
@@ -556,11 +638,13 @@ def run_game():
                             play_sound(correct_sound)
                             glow_color, glow_start_time = (0, 255, 0), pygame.time.get_ticks()
                             flash_color, flash_start_time = PASTEL_GREEN, pygame.time.get_ticks()
+                            score_glow_color, score_glow_start_time = (0, 255, 0), pygame.time.get_ticks()
                         else:
                             score -= 1
                             play_sound(incorrect_sound)
                             glow_color, glow_start_time = (255, 0, 0), pygame.time.get_ticks()
                             flash_color, flash_start_time = PASTEL_RED, pygame.time.get_ticks()
+                            score_glow_color, score_glow_start_time = (255, 0, 0), pygame.time.get_ticks()
                         current_q = generate_problem()
                         input_text = ""
                 elif event.key == pygame.K_BACKSPACE:
@@ -616,7 +700,8 @@ def show_scores():
         panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
         panel_rect.center = (WIDTH // 2, HEIGHT // 2)
 
-        pygame.draw.rect(screen, GREY, panel_rect)
+        pygame.draw.rect(screen, GREY, panel_rect, border_radius=15)
+        pygame.draw.rect(screen, WHITE, panel_rect, 3, border_radius=15)
 
         title = MENU_TITLE_FONT.render("High Scores", True, WHITE)
         screen.blit(
@@ -624,12 +709,25 @@ def show_scores():
             (panel_rect.centerx - title.get_width() // 2, panel_rect.top + 20)
         )
 
+        start_y = panel_rect.top + 110
         for i, (name, score) in enumerate(scores):
-            line = GAME_FONT.render(f"{i+1}. {name} - {score}", True, WHITE)
-            screen.blit(
-                line,
-                (panel_rect.left + 50, panel_rect.top + 80 + i * 40)
-            )
+            font = GAME_FONT
+            if i == 0:
+                try:
+                    font = pygame.font.Font(os.path.join(os.path.dirname(__file__), "Assets", "Fonts", "VT323-Regular.ttf"), 28)
+                    font.set_bold(True)
+                except Exception:
+                    font = GAME_FONT
+
+            line = font.render(f"{i+1}. {name} - {score}", True, WHITE)
+            line_rect = line.get_rect(center=(panel_rect.centerx, start_y + i * 36))
+
+            if i == 0:
+                glow_surf = pygame.Surface((line_rect.width + 24, line_rect.height + 16), pygame.SRCALPHA)
+                glow_surf.fill((255, 255, 255, 30))
+                screen.blit(glow_surf, (line_rect.x - 12, line_rect.y - 8))
+
+            screen.blit(line, line_rect)
 
         # Draw Back button
         back_button.draw(screen)
@@ -701,19 +799,30 @@ def name_entry_screen(score):
 # Main Loop
 def main():
     state = STATE_MENU
+    in_menu = False
     while True:
         screen.fill(BLACK)
         draw_ascii_globe(screen)
 
         if state == STATE_MENU:
+            # When entering the menu, pick a new phrase once
+            global menu_phrase, phrase_last_change
+            if not in_menu:
+                in_menu = True
+                menu_phrase = random.choice(menu_phrases)
+                phrase_last_change = pygame.time.get_ticks()
+
             buttons = draw_menu()
             pygame.display.flip()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 for btn in buttons:
                     if btn.is_clicked(event):
+                        # mark that we're leaving the menu so the phrase will change
+                        in_menu = False
                         if btn.text == "Start Game":
                             run_game()
                         elif btn.text == "View High Scores":
