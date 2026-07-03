@@ -276,7 +276,7 @@ class Button:
 # Countdown Function
 def countdown(seconds=3):
     BIG_FONT = load_font(128)
-    beep_sound = load_sound("countdown_beep.wav")
+    beep_sound = load_sound("beep.mp3")
     clock = pygame.time.Clock()
     
     start_time = pygame.time.get_ticks()

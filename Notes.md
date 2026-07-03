@@ -2,6 +2,8 @@
 
 ## Features / Changes
 
+* Fix bug where loading up the settings page doesn't trigger a fade animation.
+
 * Add two different background music tracks, one for the game-state, and one for the menu.
 
 * Implement hot streak (*if you get 3 in a row, you get a custom sound and maybe some kind of fire effect?*)
