@@ -135,8 +135,6 @@ if not os.path.exists(HS_FILE):
     open(HS_FILE, "w").close()
 
 
-
-
 # ASCII Globe Setup
 x_sep, y_sep = 10, 20
 rows = HEIGHT // y_sep
@@ -230,7 +228,7 @@ def draw_flash(surface, rect, color, start_time):
 
 # Button Class
 class Button:
-    def __init__(self, text, center, width, height, font, base_color=GREY, text_color=WHITE, hover_color=None, click_color=WHITE):
+    def __init__(self, text, center, width, height, font, base_color=GREY, text_color=WHITE, hover_color=None, click_color=WHITE, action=None):
         self.text = text
         self.rect = pygame.Rect(0, 0, width, height)
         self.rect.center = center
@@ -240,6 +238,7 @@ class Button:
         self.hover_color = hover_color if hover_color else tuple(max(0, c-40) for c in base_color)
         self.click_color = click_color
         self.clicked = False
+        self.action = action
 
     def draw(self, surface):
         mouse_pos = pygame.mouse.get_pos()
@@ -339,13 +338,19 @@ def draw_menu():
     screen.blit(rendered, (px, py))
 
     buttons = []
-    BUTTON_WIDTH = 400
+    BUTTON_WIDTH = 420
     BUTTON_HEIGHT = 70
-    button_texts = ["Start Game", "View High Scores", "Settings", "Quit Game"]
+    button_specs = [
+        ("Addition", "start_addition"),
+        ("Multiplication", "start_multiplication"),
+        ("View High Scores", "show_scores"),
+        ("Settings", "show_settings"),
+        ("Quit Game", "quit_game"),
+    ]
 
-    for i, text in enumerate(button_texts):
-        btn = Button(text=text, center=(WIDTH // 2, 250 + i * 100),
-                     width=BUTTON_WIDTH, height=BUTTON_HEIGHT, font=MENU_BUTTON_FONT)
+    for i, (text, action) in enumerate(button_specs):
+        btn = Button(text=text, center=(WIDTH // 2, 220 + i * 85),
+                     width=BUTTON_WIDTH, height=BUTTON_HEIGHT, font=MENU_BUTTON_FONT, action=action)
         buttons.append(btn)
 
     for btn in buttons:
@@ -404,7 +409,9 @@ def pause_menu():
 MUSIC_VOLUME = 0.15
 SFX_VOLUME = 1.0
 NUMBER_RANGE = (10, 99)
-GAME_OPERATION = "Addition"
+MODE_ADDITION = "Addition"
+MODE_MULTIPLICATION = "Multiplication"
+GAME_OPERATION = MODE_ADDITION
 
 def settings_menu():
     global MUSIC_VOLUME, SFX_VOLUME, NUMBER_RANGE
@@ -510,8 +517,25 @@ def settings_menu():
         clock.tick(FPS)
 
 # Game functions
-def generate_problem():
-    return (random.randint(10, 99), random.randint(10, 99))
+def generate_problem(operation=None):
+    operation = operation or GAME_OPERATION
+    if operation == MODE_MULTIPLICATION:
+        return (random.randint(1, 12), random.randint(1, 12))
+
+    low, high = NUMBER_RANGE
+    return (random.randint(low, high), random.randint(low, high))
+
+
+def get_problem_symbol(operation=None):
+    operation = operation or GAME_OPERATION
+    return "+" if operation == MODE_ADDITION else "×"
+
+
+def evaluate_problem(problem, operation=None):
+    operation = operation or GAME_OPERATION
+    if operation == MODE_MULTIPLICATION:
+        return problem[0] * problem[1]
+    return problem[0] + problem[1]
 
 def donut_explosion(surface, chars_data, duration=1500):
     start_time = pygame.time.get_ticks()
@@ -540,8 +564,11 @@ def donut_explosion(surface, chars_data, duration=1500):
         pygame.display.flip()
         clock.tick(FPS)
 
-def run_game():
-    global glow_color, glow_start_time, flash_color, flash_start_time, score_glow_color, score_glow_start_time
+def run_game(operation=None):
+    global GAME_OPERATION, glow_color, glow_start_time, flash_color, flash_start_time, score_glow_color, score_glow_start_time
+
+    operation = operation or GAME_OPERATION
+    GAME_OPERATION = operation
 
     # Countdown before the game starts
     countdown(3)
@@ -552,7 +579,7 @@ def run_game():
     score = 0
     input_text = ""
     start_ticks = pygame.time.get_ticks()
-    current_q = generate_problem()
+    current_q = generate_problem(operation)
 
     fade_transition(screen)
 
@@ -561,7 +588,8 @@ def run_game():
         draw_ascii_globe(screen)
 
         # Draw the main math question with bigger font
-        q_surf = BIG_GAME_FONT.render(f"{current_q[0]} + {current_q[1]} = {input_text}", True, WHITE)
+        symbol = get_problem_symbol(operation)
+        q_surf = BIG_GAME_FONT.render(f"{current_q[0]} {symbol} {current_q[1]} = {input_text}", True, WHITE)
         q_rect = q_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
         # Draw the rectangle behind the question
@@ -595,6 +623,7 @@ def run_game():
 
         timer_surf = HUD_FONT.render(timer_text, True, timer_color)
         score_surf = HUD_FONT.render(score_text, True, WHITE)
+        mode_surf = GAME_FONT.render(f"Mode: {operation}", True, WHITE)
 
         timer_rect = timer_surf.get_rect(topleft=(30, 20))
         score_rect = score_surf.get_rect(topright=(WIDTH - 30, 20))
@@ -614,6 +643,7 @@ def run_game():
 
         screen.blit(timer_surf, timer_rect)
         screen.blit(score_surf, score_rect)
+        screen.blit(mode_surf, (WIDTH // 2 - mode_surf.get_width() // 2, 24))
 
         pygame.display.flip()
 
@@ -633,7 +663,7 @@ def run_game():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     if input_text.isdigit():
-                        if int(input_text) == sum(current_q):
+                        if int(input_text) == evaluate_problem(current_q, operation):
                             score += 1
                             play_sound(correct_sound)
                             glow_color, glow_start_time = (0, 255, 0), pygame.time.get_ticks()
@@ -645,7 +675,7 @@ def run_game():
                             glow_color, glow_start_time = (255, 0, 0), pygame.time.get_ticks()
                             flash_color, flash_start_time = PASTEL_RED, pygame.time.get_ticks()
                             score_glow_color, score_glow_start_time = (255, 0, 0), pygame.time.get_ticks()
-                        current_q = generate_problem()
+                        current_q = generate_problem(operation)
                         input_text = ""
                 elif event.key == pygame.K_BACKSPACE:
                     input_text = input_text[:-1]
@@ -683,6 +713,7 @@ def show_scores():
 
     BUTTON_WIDTH = 250
     BUTTON_HEIGHT = 60
+    selected_mode = MODE_ADDITION
     back_button = Button(
         "Back",
         (WIDTH // 2, HEIGHT - 100),
@@ -690,15 +721,19 @@ def show_scores():
         BUTTON_HEIGHT,
         MENU_BUTTON_FONT
     )
+    mode_buttons = [
+        Button(MODE_ADDITION, (WIDTH // 2 - 180, 115), 140, 44, GAME_FONT),
+        Button(MODE_MULTIPLICATION, (WIDTH // 2 + 180, 115), 180, 44, GAME_FONT),
+    ]
 
     while True:
         screen.fill(BLACK)
         draw_ascii_globe(screen)
-        scores = load_scores()
+        scores = load_scores(selected_mode)
 
-        panel_width, panel_height = 500, 500
+        panel_width, panel_height = 560, 520
         panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
-        panel_rect.center = (WIDTH // 2, HEIGHT // 2)
+        panel_rect.center = (WIDTH // 2, HEIGHT // 2 + 10)
 
         pygame.draw.rect(screen, GREY, panel_rect, border_radius=15)
         pygame.draw.rect(screen, WHITE, panel_rect, 3, border_radius=15)
@@ -709,7 +744,13 @@ def show_scores():
             (panel_rect.centerx - title.get_width() // 2, panel_rect.top + 20)
         )
 
-        start_y = panel_rect.top + 110
+        subtitle = GAME_FONT.render(f"Showing: {selected_mode}", True, WHITE)
+        screen.blit(subtitle, (panel_rect.centerx - subtitle.get_width() // 2, panel_rect.top + 90))
+
+        for btn in mode_buttons:
+            btn.draw(screen)
+
+        start_y = panel_rect.top + 135
         for i, (name, score) in enumerate(scores):
             font = GAME_FONT
             if i == 0:
@@ -729,7 +770,6 @@ def show_scores():
 
             screen.blit(line, line_rect)
 
-        # Draw Back button
         back_button.draw(screen)
 
         pygame.display.flip()
@@ -739,12 +779,15 @@ def show_scores():
                 pygame.quit()
                 sys.exit()
 
-            # Mouse-based back button
+            for btn in mode_buttons:
+                if btn.is_clicked(event):
+                    selected_mode = btn.text
+                    break
+
             if back_button.is_clicked(event):
                 fade_transition(screen)
                 return
 
-            # Keeping ESC support
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 fade_transition(screen)
                 return
@@ -798,6 +841,7 @@ def name_entry_screen(score):
 
 # Main Loop
 def main():
+    global GAME_OPERATION
     state = STATE_MENU
     in_menu = False
     while True:
@@ -823,14 +867,18 @@ def main():
                     if btn.is_clicked(event):
                         # mark that we're leaving the menu so the phrase will change
                         in_menu = False
-                        if btn.text == "Start Game":
-                            run_game()
-                        elif btn.text == "View High Scores":
+                        if btn.action == "start_addition":
+                            GAME_OPERATION = MODE_ADDITION
+                            run_game(GAME_OPERATION)
+                        elif btn.action == "start_multiplication":
+                            GAME_OPERATION = MODE_MULTIPLICATION
+                            run_game(GAME_OPERATION)
+                        elif btn.action == "show_scores":
                             show_scores()
-                        elif btn.text == "Quit Game":
+                        elif btn.action == "quit_game":
                             pygame.quit()
                             sys.exit()
-                        elif btn.text == "Settings":
+                        elif btn.action == "show_settings":
                             settings_menu()
 
         clock.tick(FPS)
